@@ -55,7 +55,8 @@ jobs:
           tags: ${{ github.event_name == 'release' && steps.meta-release.outputs.tags || steps.meta-manual.outputs.tags }}
 
       - name: Update Docker Hub description
-        uses: peter-evans/dockerhub-description@v5
+        # peter-evans/dockerhub-description@v5 — pin to commit SHA for supply-chain safety
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
