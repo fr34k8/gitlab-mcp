@@ -97,6 +97,14 @@ const TOOL_GUIDANCE: Readonly<Record<string, string>> = {
     "Use this to stop eligible stale environments in a project. GitLab excludes protected environments, and this operation stops environments without deleting them. It requires the necessary project permission and returns the result or a validation, permission, or rate-limit error.",
   delete_review_app_environments:
     "Use this to clean up stopped review-app environments after verifying the scope. GitLab schedules deletion one week later rather than deleting environments immediately; `dry_run` defaults to `true`, so actual scheduling requires `dry_run: false`. It requires the necessary project permission and returns the cleanup result or a validation, permission, or rate-limit error.",
+  orbit_query:
+    "Use this to answer cross-project relationship questions (blast radius, file-to-MR history, dependency fans) in one call instead of chaining list/get tools; use `orbit_get_schema` first when the node/edge types are unknown. It is read-only but each call consumes GitLab credits, requires Premium/Ultimate on an Orbit-enabled scope, and returns the graph result or a query/permission error.",
+  orbit_get_schema:
+    "Use this to learn the node and edge types available for `orbit_query` before writing a query; use `orbit_get_status` when the concern is index freshness rather than shape. It is read-only and free of credit charges, and returns the current graph schema or a permission error.",
+  orbit_get_status:
+    "Use this to check whether Orbit indexing has completed before trusting `orbit_query` results; results reflect the last index cycle, not real-time state. It is read-only and free of credit charges, and returns the indexing status or a permission error.",
+  orbit_list_tools:
+    "Use this to see which MCP tool definitions Orbit itself exposes; use `orbit_query` to run graph queries directly. It is read-only and free of credit charges, and returns the tool definition list or a permission error.",
 };
 
 const PARAMETER_GUIDANCE =

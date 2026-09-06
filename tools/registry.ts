@@ -220,6 +220,10 @@ import {
   MergeMergeRequestSchema,
   MoveWorkItemSchema,
   MyIssuesSchema,
+  OrbitQuerySchema,
+  OrbitSchemaSchema,
+  OrbitStatusSchema,
+  OrbitToolsSchema,
   PlayPipelineJobSchema,
   PromoteProjectMilestoneSchema,
   PublishDraftNoteSchema,
@@ -1495,6 +1499,27 @@ export const allTools = [
     description: "Confirm a vulnerability as a real finding requiring remediation",
     inputSchema: toJSONSchema(ConfirmVulnerabilitySchema),
   },
+  // --- GitLab Orbit (knowledge graph) tools ---
+  {
+    name: "orbit_query",
+    description: "Execute a GitLab Orbit graph query over the indexed SDLC knowledge graph",
+    inputSchema: toJSONSchema(OrbitQuerySchema),
+  },
+  {
+    name: "orbit_get_schema",
+    description: "Fetch the current GitLab Orbit graph schema (node and edge types)",
+    inputSchema: toJSONSchema(OrbitSchemaSchema),
+  },
+  {
+    name: "orbit_get_status",
+    description: "Check GitLab Orbit indexing status for the enabled scope",
+    inputSchema: toJSONSchema(OrbitStatusSchema),
+  },
+  {
+    name: "orbit_list_tools",
+    description: "List the MCP tool definitions exposed by GitLab Orbit",
+    inputSchema: toJSONSchema(OrbitToolsSchema),
+  },
   // --- Meta tool: Dynamic tool discovery ---
   {
     name: "discover_tools",
@@ -1648,6 +1673,10 @@ export const readOnlyTools = new Set([
   "list_dependency_proxy_blobs",
   "list_project_vulnerabilities",
   "get_vulnerability",
+  "orbit_query",
+  "orbit_get_schema",
+  "orbit_get_status",
+  "orbit_list_tools",
 ]);
 
 // Define which tools are destructive (data loss potential)
@@ -1847,7 +1876,8 @@ export type ToolsetId =
   | "search"
   | "variables"
   | "dependency_proxy"
-  | "vulnerabilities";
+  | "vulnerabilities"
+  | "orbit";
 
 export interface ToolsetDefinition {
   readonly id: ToolsetId;
@@ -2227,6 +2257,11 @@ export const TOOLSET_DEFINITIONS: readonly ToolsetDefinition[] = [
       "dismiss_vulnerability",
       "confirm_vulnerability",
     ]),
+  },
+  {
+    id: "orbit",
+    isDefault: false,
+    tools: new Set(["orbit_query", "orbit_get_schema", "orbit_get_status", "orbit_list_tools"]),
   },
 ] as const;
 

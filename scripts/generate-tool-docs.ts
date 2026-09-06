@@ -140,6 +140,11 @@ const GROUP_META: Record<ToolsetId, GroupMeta> = {
     blurb:
       "AI-assisted vulnerability triage — list findings, inspect details, dismiss with reason, or confirm for remediation. Backed by the GitLab GraphQL API; requires GitLab Ultimate.",
   },
+  orbit: {
+    title: "GitLab Orbit",
+    blurb:
+      "Query the Orbit SDLC knowledge graph (Beta; Premium/Ultimate). Graph queries consume GitLab credits; schema, status, and tool listing are free.",
+  },
 };
 
 const GROUP_ORDER: ToolsetId[] = [
@@ -163,6 +168,7 @@ const GROUP_ORDER: ToolsetId[] = [
   "search",
   "dependency_proxy",
   "vulnerabilities",
+  "orbit",
 ];
 
 // --- Helpers --------------------------------------------------------------
