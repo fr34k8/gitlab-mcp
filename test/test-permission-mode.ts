@@ -75,6 +75,7 @@ const DELETE_SAMPLE_TOOLS = [
   "delete_milestone",
   "delete_group_milestone",
   "delete_project_variable",
+  "delete_webhook",
 ];
 
 const MODIFY_SAMPLE_TOOLS = [
@@ -84,6 +85,7 @@ const MODIFY_SAMPLE_TOOLS = [
   "create_branch",
   "push_files",
   "merge_merge_request",
+  "stop_stale_environments",
 ];
 
 const READ_SAMPLE_TOOLS = ["list_issues", "get_project", "list_merge_requests"];

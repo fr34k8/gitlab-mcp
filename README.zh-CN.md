@@ -17,7 +17,7 @@
 
 ### 为什么使用这个 GitLab MCP？
 
-- **217 个工具 + `discover_tools`** — 从小型 toolset 开始，运行时按需激活类别
+- **232 个工具 + `discover_tools`** — 从小型 toolset 开始，运行时按需激活类别
 - **MR 两步审查** — `list_merge_request_changed_files` → 批量 `get_merge_request_file_diff`
 - **内置 Agent Skill** — `skills/gitlab-mcp/` 工作流指南
 - **认证灵活** — Personal Access Token、本地 OAuth2 浏览器流程、MCP OAuth 代理、按请求远程授权
@@ -30,9 +30,9 @@
 | | @zereight/mcp-gitlab | GitLab MCP A（社区 CQRS 型） |
 |---|----------------------|------------------------------|
 | **更适合** | AI 代理工作流 | 企业多实例 / 分组工具 |
-| **工具模型** | ~217 个细粒度工具 + `discover_tools` | ~50–60 个 `browse_*` / `manage_*` 分组工具 |
+| **工具模型** | ~232 个细粒度工具 + `discover_tools` | ~50–60 个 `browse_*` / `manage_*` 分组工具 |
 | **MR 审查** | 两步批量 diff | 因服务器而异 |
-| **Node.js** | >=18 | 通常 >=24 |
+| **Node.js** | >=18.17 | 通常 >=24 |
 | **许可证** | MIT | 因服务器而异 |
 
 [完整对比 →](./docs/comparison/community-gitlab-mcp-a.md)
@@ -96,9 +96,21 @@ brew install zereight/gitlab-mcp/zereight-mcp-gitlab
 npm install -g @zereight/mcp-gitlab
 ```
 
+也可以使用 Nix，把此 flake 添加到你自己的 flake 中：
+
+```nix
+# flake.nix
+inputs.gitlab-mcp.url = "github:zereight/gitlab-mcp";
+
+# wherever you configure your MCP client:
+command = lib.getExe inputs.gitlab-mcp.packages.${system}.default;
+```
+
+存储路径由你的 lock 文件固定，使用 `nix flake update gitlab-mcp` 更新。
+
 示例使用 `zereight-mcp-gitlab`，这是比旧的 `mcp-gitlab` 更不容易冲突的别名。如果 MCP 客户端找不到它，请使用 `which zereight-mcp-gitlab` 输出的绝对路径。
 
-如果不想全局安装，请将 `npx` 固定到上一个稳定版本（即文档推荐的版本），例如 `npx -y @zereight/mcp-gitlab@2.1.53`。如果始终想使用最新版本，请改用 `npx -y @zereight/mcp-gitlab@latest`。有新版本发布时，服务器会在启动时通过 stderr 提示（可用 `GITLAB_DISABLE_VERSION_CHECK=true` 关闭）。
+如果不想全局安装，请将 `npx` 固定到上一个稳定版本（即文档推荐的版本），例如 `npx -y @zereight/mcp-gitlab@2.1.58`。如果始终想使用最新版本，请改用 `npx -y @zereight/mcp-gitlab@latest`。有新版本发布时，服务器会在启动时通过 stderr 提示（可用 `GITLAB_DISABLE_VERSION_CHECK=true` 关闭）。
 
 #### 使用 CLI 参数（适用于环境变量有问题的客户端）
 
@@ -289,7 +301,7 @@ MCP 客户端配置：
 | `STREAMABLE_HTTP`                                                | 是   | 必须为 `true`                                                                                                           |
 | `ENABLE_DYNAMIC_API_URL`                                         | 可选 | 允许按请求通过 `X-GitLab-API-URL` 请求头指定 GitLab URL                                                                 |
 | `GITLAB_ALLOWED_HOSTS`                                           | 可选 | 允许的 `X-GitLab-API-URL` 主机逗号分隔列表；`GITLAB_API_URL` 中的主机始终允许                                          |
-| `GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY`                    | 可选 | 仅允许未认证的 `initialize`、`notifications/initialized`、`tools/list`（工具调用仍需认证）                                |
+| `GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY`                    | 可选 | 仅允许未认证的 `initialize`、`notifications/initialized`、`tools/list`、`server/discover`（工具调用仍需认证）                                |
 | `MCP_SERVER_URL` / `MCP_ALLOWED_HOSTS` / `MCP_ALLOWED_ORIGINS` | 可选 | 用于 DNS rebinding 防护的允许 `/mcp` 主机/来源值                                                                        |
 | `MCP_TRUST_PROXY`                                                | 可选 | 在反向代理后信任 `Forwarded` / `X-Forwarded-*` 请求头（下载 URL、Express `req.ip`、`/mcp` IP 速率限制、OAuth 速率限制） |
 

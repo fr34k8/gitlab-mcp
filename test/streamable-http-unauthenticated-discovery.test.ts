@@ -146,23 +146,125 @@ describe("Streamable HTTP unauthenticated tool discovery", { timeout: 20_000 }, 
     assert.ok(listResponse.data.result.tools.length > 0, "tools/list should not be empty");
   });
 
+  test("allows unauthenticated server/discover in individual and batch requests", async () => {
+    const { server, mcpUrl } = await launchRemoteAuthServer({
+      GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY: "true",
+    });
+    servers.push(server);
+
+    const preInitDiscover = await rawMcpRequest(mcpUrl, {
+      jsonrpc: "2.0",
+      id: 10,
+      method: "server/discover",
+      params: {},
+    });
+    assert.strictEqual(preInitDiscover.status, 400, preInitDiscover.text);
+    assert.match(
+      preInitDiscover.data?.error?.message ?? "",
+      /Server not initialized/i,
+      "server/discover should pass the auth gate before MCP initialization errors"
+    );
+
+    const sessionId = await initialize(mcpUrl);
+    const initialized = await rawMcpRequest(
+      mcpUrl,
+      { jsonrpc: "2.0", method: "notifications/initialized" },
+      { "mcp-session-id": sessionId }
+    );
+    assert.ok([200, 202, 204].includes(initialized.status), initialized.text);
+
+    const discoverResponse = await rawMcpRequest(
+      mcpUrl,
+      { jsonrpc: "2.0", id: 11, method: "server/discover", params: {} },
+      { "mcp-session-id": sessionId }
+    );
+    assert.strictEqual(discoverResponse.status, 200, discoverResponse.text);
+    assert.strictEqual(discoverResponse.data?.id, 11);
+    assert.strictEqual(discoverResponse.data?.error?.code, -32601);
+    assert.match(discoverResponse.data?.error?.message ?? "", /Method not found/i);
+
+    const batchResponse = await rawMcpRequest(
+      mcpUrl,
+      [
+        { jsonrpc: "2.0", id: 12, method: "server/discover", params: {} },
+        { jsonrpc: "2.0", id: 13, method: "tools/list", params: {} },
+      ],
+      { "mcp-session-id": sessionId }
+    );
+    assert.strictEqual(batchResponse.status, 200, batchResponse.text);
+    assert.ok(Array.isArray(batchResponse.data.result?.tools), "batch tools/list should return tools");
+    assert.ok(batchResponse.data.result.tools.length > 0, "batch tools/list should not be empty");
+  });
+
+  test("rejects unauthenticated discovery batch when tools/call is included", async () => {
+    const { server, mcpUrl } = await launchRemoteAuthServer({
+      GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY: "true",
+    });
+    servers.push(server);
+
+    const response = await rawMcpRequest(mcpUrl, [
+      { jsonrpc: "2.0", id: 20, method: "server/discover", params: {} },
+      {
+        jsonrpc: "2.0",
+        id: 21,
+        method: "tools/call",
+        params: {
+          name: "get_project",
+          arguments: { project_id: "123" },
+        },
+      },
+    ]);
+
+    assert.strictEqual(response.status, 401, response.text);
+  });
+
   test("expires unauthenticated discovery sessions and frees capacity", async () => {
     const { server, mcpUrl } = await launchRemoteAuthServer({
       GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY: "true",
       MAX_SESSIONS: "1",
+      MAX_REQUESTS_PER_MINUTE: "1",
+      MCP_TRUST_PROXY: "true",
       SESSION_TIMEOUT_SECONDS: "1",
     });
     servers.push(server);
 
-    await initialize(mcpUrl);
+    const expiredSessionId = await initialize(mcpUrl);
     await new Promise(resolve => setTimeout(resolve, 2_000));
+
+    const expiredResponse = await rawMcpRequest(
+      mcpUrl,
+      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+      { "mcp-session-id": expiredSessionId }
+    );
+    assert.strictEqual(expiredResponse.status, 404, expiredResponse.text);
+    assert.deepStrictEqual(expiredResponse.data, { error: "Session not found" });
 
     const healthResponse = await fetch(mcpUrl.replace("/mcp", "/health"));
     assert.strictEqual(healthResponse.status, 200);
 
-    const nextSession = await rawMcpRequest(mcpUrl, initializeBody);
+    const nextSession = await rawMcpRequest(mcpUrl, initializeBody, {
+      "x-forwarded-for": "192.0.2.10",
+    });
     assert.strictEqual(nextSession.status, 200, nextSession.text);
     assert.ok(nextSession.sessionId, "expired discovery session should free capacity");
+  });
+
+  test("rejects inherited object-property names as unknown session IDs", async () => {
+    const { server, mcpUrl } = await launchRemoteAuthServer({
+      GITLAB_ALLOW_UNAUTHENTICATED_TOOL_DISCOVERY: "true",
+    });
+    servers.push(server);
+
+    for (const sessionId of ["constructor", "toString", "__proto__"]) {
+      const response = await rawMcpRequest(
+        mcpUrl,
+        { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+        { "mcp-session-id": sessionId }
+      );
+
+      assert.strictEqual(response.status, 404, `${sessionId}: ${response.text}`);
+      assert.deepStrictEqual(response.data, { error: "Session not found" });
+    }
   });
 
   test("still blocks unauthenticated tools/call when discovery is enabled", async () => {

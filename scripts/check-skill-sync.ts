@@ -31,6 +31,11 @@ const REFERENCE_FIELD_ALLOWLIST = new Set([
   "new_file",
   "new_path",
   "old_path",
+  "name",
+  "page",
+  "per_page",
+  "pipeline_id",
+  "job_inputs",
   "project_id",
   "renamed_file",
 ]);

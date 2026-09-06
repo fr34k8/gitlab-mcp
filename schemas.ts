@@ -120,6 +120,8 @@ export const GitLabPipelineJobSchema = z.object({
   web_url: z.string().optional(),
   allow_failure: z.coerce.boolean().optional(),
   retried: z.coerce.boolean().optional(),
+  when: z.string().optional(),
+  needs: z.array(z.unknown()).optional(),
   tag_list: z.array(z.string()).optional(),
   runner: z
     .object({
@@ -263,6 +265,41 @@ export const GetPipelineSchema = z.object({
   pipeline_id: z.coerce.string().describe("The ID of the pipeline"),
 });
 
+export const GetPipelineVariablesSchema = GetPipelineSchema.merge(PaginationOptionsSchema);
+export const UpdatePipelineMetadataSchema = GetPipelineSchema.extend({
+  name: z.string().min(1).describe("New pipeline name"),
+});
+export const DeletePipelineSchema = GetPipelineSchema;
+export const PipelineReportSchema = GetPipelineSchema.merge(PaginationOptionsSchema);
+export const PlayPipelineJobsSchema = z.object({
+  project_id: z.coerce.string().describe("Project ID or URL-encoded path"),
+  job_ids: z
+    .array(z.coerce.string())
+    .min(1)
+    .refine((jobIds) => new Set(jobIds).size === jobIds.length, "job_ids must not contain duplicates")
+    .describe("Job IDs to play, in dependency order"),
+  job_variables_attributes: z
+    .array(z.object({ key: z.string(), value: z.string() }))
+    .optional()
+    .describe("Custom job variables to use when running each job"),
+  timeout_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(600)
+    .optional()
+    .describe(
+      "Maximum seconds to wait for each job to reach a terminal status (applied per job; total duration scales with the batch size)"
+    ),
+  poll_interval_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .optional()
+    .describe("Seconds between status polls while waiting for each job"),
+});
+
 export const GitLabMergeRequestPipelineSchema = z.object({
   id: z.coerce.string(),
   sha: z.string(),
@@ -397,6 +434,31 @@ export const GetCiCatalogResourceSchema = z.union([
 });
 
 // Deployment related schemas
+const GitLabDeploymentApprovalUserSchema = z.object({
+  id: z.coerce.string().optional(),
+  username: z.string().optional(),
+  name: z.string().optional(),
+  state: z.string().optional(),
+  avatar_url: z.string().nullable().optional(),
+  web_url: z.string().optional(),
+});
+
+const GitLabDeploymentApprovalSchema = z.object({
+  user: GitLabDeploymentApprovalUserSchema.optional(),
+  status: z.string().optional(),
+  created_at: z.string().optional(),
+  comment: z.string().nullable().optional(),
+});
+
+const GitLabDeploymentApprovalRuleSchema = z.object({
+  user_id: z.coerce.string().nullable().optional(),
+  group_id: z.coerce.string().nullable().optional(),
+  access_level: z.coerce.number().nullable().optional(),
+  access_level_description: z.string().nullable().optional(),
+  required_approvals: z.coerce.number().optional(),
+  deployment_approvals: z.array(GitLabDeploymentApprovalSchema).optional(),
+});
+
 export const GitLabDeploymentSchema = z.object({
   id: z.coerce.string(),
   iid: z.coerce.string().optional(),
@@ -444,6 +506,11 @@ export const GitLabDeploymentSchema = z.object({
     })
     .optional(),
   web_url: z.string().optional(),
+  pending_approval_count: z.coerce.number().optional(),
+  approvals: z.array(GitLabDeploymentApprovalSchema).optional(),
+  approval_summary: z
+    .object({ rules: z.array(GitLabDeploymentApprovalRuleSchema).optional() })
+    .optional(),
 });
 
 export const ListDeploymentsSchema = z
@@ -476,6 +543,19 @@ export const GetDeploymentSchema = z.object({
   project_id: z.coerce.string().describe("Project ID or URL-encoded path"),
   deployment_id: z.coerce.string().describe("The ID of the deployment"),
 });
+export const CreateDeploymentSchema = z.object({
+  project_id: z.coerce.string(), environment: z.string(), sha: z.string(), ref: z.string(),
+  tag: z.boolean(), status: z.enum(["running", "success", "failed", "canceled"]),
+});
+export const UpdateDeploymentSchema = GetDeploymentSchema.extend({
+  status: z.enum(["running", "success", "failed", "canceled"]),
+});
+export const DeploymentApprovalSchema = GetDeploymentSchema.extend({
+  status: z.enum(["approved", "rejected"]),
+  comment: z.string().optional(),
+  represented_as: z.string().optional(),
+});
+export const ListDeploymentMergeRequestsSchema = GetDeploymentSchema.merge(PaginationOptionsSchema);
 
 // Environment related schemas
 const GitLabEnvironmentLastDeploymentSchema = z.object({
@@ -518,6 +598,31 @@ export const ListEnvironmentsSchema = z
 export const GetEnvironmentSchema = z.object({
   project_id: z.coerce.string().describe("Project ID or URL-encoded path"),
   environment_id: z.coerce.string().describe("The ID of the environment"),
+});
+export const UpdateEnvironmentSchema = GetEnvironmentSchema.extend({
+  external_url: z.string().url().nullable().optional(),
+  tier: z.enum(["production", "staging", "testing", "development", "other"]).optional(),
+  auto_stop_setting: z.enum(["always", "with_action"]).optional(),
+});
+export const StopEnvironmentSchema = GetEnvironmentSchema.extend({ force: coerceBooleanString.optional() });
+export const StopStaleEnvironmentsSchema = z.object({ project_id: z.coerce.string(), before: z.string() });
+export const DeleteReviewAppEnvironmentsSchema = z.object({
+  project_id: z.coerce.string(), before: z.string().optional(), limit: z.coerce.number().optional(),
+  dry_run: coerceBooleanString
+    .optional()
+    .describe("Preview the cleanup when true (default); set to false to schedule deletion one week later"),
+});
+export const PipelineTriggerIdSchema = z.object({ project_id: z.coerce.string(), trigger_id: z.coerce.string() });
+export const ListPipelineTriggersSchema = z.object({ project_id: z.coerce.string() });
+export const CreatePipelineTriggerSchema = z.object({ project_id: z.coerce.string(), description: z.string() });
+export const UpdatePipelineTriggerSchema = PipelineTriggerIdSchema.extend({ description: z.string() });
+export const TriggerPipelineSchema = z.object({
+  project_id: z.coerce.string(), token: z.string(), ref: z.string(),
+  variables: z.record(z.string()).optional(),
+  inputs: z
+    .record(z.unknown())
+    .optional()
+    .describe("Structured pipeline inputs; supported from GitLab 17.10 behind a feature flag and generally available from GitLab 18.1. Omit on older GitLab versions."),
 });
 
 // Schema for creating a new pipeline
@@ -837,16 +942,52 @@ export const PlayPipelineJobSchema = z.object({
     )
     .optional()
     .describe("Custom job variables to use when running the job"),
+  job_inputs: z.record(z.unknown()).optional().describe("Typed job input values"),
 });
 
 // Schema for retrying a job
-export const RetryPipelineJobSchema = PipelineJobControlSchema;
+export const RetryPipelineJobSchema = PipelineJobControlSchema.extend({
+  job_inputs: z.record(z.unknown()).optional().describe("Typed job input values"),
+});
 
 // Schema for canceling a job
 export const CancelPipelineJobSchema = z.object({
   project_id: z.coerce.string().describe("Project ID or URL-encoded path"),
   job_id: z.coerce.string().describe("The ID of the job"),
   force: z.coerce.boolean().optional().describe("Force cancellation of the job"),
+});
+export const ErasePipelineJobSchema = PipelineJobControlSchema;
+export const WaitForPipelineSchema = GetPipelineSchema.extend({
+  timeout_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(600)
+    .optional()
+    .describe("Maximum seconds to wait for this pipeline to reach a terminal status"),
+  poll_interval_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .optional()
+    .describe("Seconds between status polls while waiting for this pipeline"),
+});
+export const WaitForPipelineJobSchema = PipelineJobControlSchema.extend({
+  timeout_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(600)
+    .optional()
+    .describe("Maximum seconds to wait for this job to reach a terminal status"),
+  poll_interval_seconds: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(30)
+    .optional()
+    .describe("Seconds between status polls while waiting for this job"),
 });
 
 // User schemas
@@ -1353,6 +1494,7 @@ export const GitLabCreateUpdateFileResponseSchema = z.object({
 export const GitLabSearchResponseSchema = z.object({
   count: z.coerce.number().optional(),
   total_pages: z.coerce.number().optional(),
+  next_page: z.coerce.number().optional(),
   current_page: z.coerce.number().optional(),
   items: z.array(GitLabRepositorySchema),
 });
@@ -2682,8 +2824,7 @@ export const ListGroupMergeRequestsSchema = ListMergeRequestsSchema.omit({
   project_id: true,
 }).extend({
   group_id: z.coerce.string().describe("Group ID or URL-encoded path"),
-  non_archived: z.coerce
-    .boolean()
+  non_archived: coerceBooleanString
     .optional()
     .describe("Return merge requests from non-archived projects only. Defaults to true."),
   source_project_id: z.coerce
@@ -4955,6 +5096,16 @@ export const CreateTimelineEventSchema = z.object({
 
 // --- Webhook schemas ---
 
+function hasExactlyOneWebhookScope(data: { project_id?: string; group_id?: string }): boolean {
+  const hasProject = Boolean(data.project_id);
+  const hasGroup = Boolean(data.group_id);
+  return (hasProject || hasGroup) && !(hasProject && hasGroup);
+}
+
+const EXACTLY_ONE_WEBHOOK_SCOPE = {
+  message: "Provide exactly one of project_id or group_id",
+};
+
 export const ListWebhooksSchema = z
   .object({
     project_id: z.coerce
@@ -4967,9 +5118,7 @@ export const ListWebhooksSchema = z
       .describe("Group ID or URL-encoded path. Provide either project_id or group_id, not both."),
   })
   .merge(PaginationOptionsSchema)
-  .refine(data => (data.project_id || data.group_id) && !(data.project_id && data.group_id), {
-    message: "Provide exactly one of project_id or group_id",
-  });
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
 
 export const ListWebhookEventsSchema = z
   .object({
@@ -4997,9 +5146,7 @@ export const ListWebhookEventsSchema = z
     per_page: z.number().max(20).optional().default(20).describe("Number of events per page"),
     page: z.coerce.number().optional().describe("Page number for pagination"),
   })
-  .refine(data => (data.project_id || data.group_id) && !(data.project_id && data.group_id), {
-    message: "Provide exactly one of project_id or group_id",
-  });
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
 
 export const GetWebhookEventSchema = z
   .object({
@@ -5020,9 +5167,122 @@ export const GetWebhookEventSchema = z
         "If known, the page where the event is located (from list_webhook_events). Skips auto-pagination and fetches only this page."
       ),
   })
-  .refine(data => (data.project_id || data.group_id) && !(data.project_id && data.group_id), {
-    message: "Provide exactly one of project_id or group_id",
-  });
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
+
+const WebhookCustomHeaderSchema = z.object({
+  key: z.string().min(1).describe("Custom header name"),
+  value: z.string().describe("Custom header value"),
+});
+
+const WebhookMutationFields = {
+  url: z.string().url().describe("Webhook destination URL"),
+  name: z.string().optional().describe("Display name for the webhook"),
+  description: z.string().optional().describe("Description of the webhook"),
+  token: z
+    .string()
+    .optional()
+    .describe("Secret token to validate received payloads. Not returned by GitLab in responses."),
+  signing_token: z
+    .string()
+    .optional()
+    .describe(
+      "HMAC signing token in whsec_<base64> form, where the Base64 suffix encodes a 32-byte key. Used for the webhook-signature header. Not returned by GitLab in responses."
+    ),
+  enable_ssl_verification: z
+    .boolean()
+    .optional()
+    .describe("Verify SSL when delivering the webhook"),
+  push_events: z.boolean().optional().describe("Trigger on push events"),
+  push_events_branch_filter: z
+    .string()
+    .optional()
+    .describe("Only trigger push events for matching branches"),
+  branch_filter_strategy: z
+    .enum(["wildcard", "regex", "all_branches"])
+    .optional()
+    .describe("How push_events_branch_filter is interpreted"),
+  issues_events: z.boolean().optional().describe("Trigger on issue events"),
+  confidential_issues_events: z
+    .boolean()
+    .optional()
+    .describe("Trigger on confidential issue events"),
+  merge_requests_events: z.boolean().optional().describe("Trigger on merge request events"),
+  tag_push_events: z.boolean().optional().describe("Trigger on tag push events"),
+  note_events: z.boolean().optional().describe("Trigger on note/comment events"),
+  confidential_note_events: z
+    .boolean()
+    .optional()
+    .describe("Trigger on confidential note events"),
+  job_events: z.boolean().optional().describe("Trigger on job events"),
+  pipeline_events: z.boolean().optional().describe("Trigger on pipeline events"),
+  wiki_page_events: z.boolean().optional().describe("Trigger on wiki page events"),
+  deployment_events: z.boolean().optional().describe("Trigger on deployment events"),
+  feature_flag_events: z.boolean().optional().describe("Trigger on feature flag events"),
+  releases_events: z.boolean().optional().describe("Trigger on release events"),
+  milestone_events: z.boolean().optional().describe("Trigger on milestone events"),
+  resource_access_token_events: z
+    .boolean()
+    .optional()
+    .describe("Trigger on access token expiry events"),
+  resource_deploy_token_events: z
+    .boolean()
+    .optional()
+    .describe("Trigger on project deploy token expiry events (project webhooks)"),
+  member_events: z.boolean().optional().describe("Trigger on member events (group webhooks)"),
+  project_events: z.boolean().optional().describe("Trigger on project events (group webhooks)"),
+  subgroup_events: z.boolean().optional().describe("Trigger on subgroup events (group webhooks)"),
+  custom_webhook_template: z
+    .string()
+    .optional()
+    .describe("Custom JSON payload template for the webhook"),
+  custom_headers: z
+    .array(WebhookCustomHeaderSchema)
+    .optional()
+    .describe("Custom HTTP headers sent with the webhook. Each item has key and value strings."),
+};
+
+export const CreateWebhookSchema = z
+  .object({
+    project_id: z.coerce
+      .string()
+      .optional()
+      .describe("Project ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    group_id: z.coerce
+      .string()
+      .optional()
+      .describe("Group ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    ...WebhookMutationFields,
+  })
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
+
+export const UpdateWebhookSchema = z
+  .object({
+    project_id: z.coerce
+      .string()
+      .optional()
+      .describe("Project ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    group_id: z.coerce
+      .string()
+      .optional()
+      .describe("Group ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    hook_id: z.coerce.number().describe("ID of the webhook to update"),
+    ...WebhookMutationFields,
+  })
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
+
+export const DeleteWebhookSchema = z
+  .object({
+    project_id: z.coerce
+      .string()
+      .optional()
+      .describe("Project ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    group_id: z.coerce
+      .string()
+      .optional()
+      .describe("Group ID or URL-encoded path. Provide either project_id or group_id, not both."),
+    hook_id: z.coerce.number().describe("ID of the webhook to delete"),
+  })
+  .refine(hasExactlyOneWebhookScope, EXACTLY_ONE_WEBHOOK_SCOPE);
 
 // Search code types
 export type GitLabSearchBlobResult = z.infer<typeof GitLabSearchBlobResultSchema>;
