@@ -159,4 +159,19 @@ describe("orbit tools", () => {
     assert.equal(text, mockQueryLlm);
     assert.deepEqual(lastQueryBody, { query, format: "llm" });
   });
+
+  test("orbit tools are refused under strict project scope", async () => {
+    const env: NodeJS.ProcessEnv = {
+      ...baseEnv(mockGitLabUrl),
+      ENABLE_STRICT_PROJECT_SCOPE: "true",
+      GITLAB_ALLOWED_PROJECT_IDS: "1,2",
+    };
+    let message = "";
+    try {
+      message = await callToolAsync(env, "orbit_get_status", {});
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    assert.match(message, /not allowed while a project allowlist is in effect/);
+  });
 });

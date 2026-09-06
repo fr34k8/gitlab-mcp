@@ -13737,6 +13737,7 @@ async function handleToolCall(params: any) {
       }
 
       case "orbit_query": {
+        rejectIfStrictProjectScope("orbit_query");
         const args = OrbitQuerySchema.parse(params.arguments);
         const result = await orbitQuery(args.query, args.format);
         const text = typeof result === "string" ? result : JSON.stringify(result);
@@ -13744,18 +13745,21 @@ async function handleToolCall(params: any) {
       }
 
       case "orbit_get_schema": {
+        rejectIfStrictProjectScope("orbit_get_schema");
         OrbitSchemaSchema.parse(params.arguments);
         const result = await orbitGetSchema();
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
 
       case "orbit_get_status": {
+        rejectIfStrictProjectScope("orbit_get_status");
         OrbitStatusSchema.parse(params.arguments);
         const result = await orbitGetStatus();
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
 
       case "orbit_list_tools": {
+        rejectIfStrictProjectScope("orbit_list_tools");
         OrbitToolsSchema.parse(params.arguments);
         const result = await orbitListTools();
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
