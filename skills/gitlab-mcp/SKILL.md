@@ -5,7 +5,7 @@ description: Use this skill when working with the GitLab MCP server tools for me
 
 # gitlab-mcp
 
-GitLab MCP server providing 258 tools: 256 tools across 20 toolsets, plus `execute_graphql` and the always-available `discover_tools` meta-tool.
+GitLab MCP server providing 262 tools: 260 tools across 21 toolsets, plus `execute_graphql` and the always-available `discover_tools` meta-tool.
 
 For exact generated parameter tables, see `docs/tools/`. Use this file for workflow shape and high-signal parameter hints.
 
@@ -33,6 +33,7 @@ For exact generated parameter tables, see `docs/tools/`. Use this file for workf
 | variables (10 tools) | no | `GITLAB_TOOLSETS=variables` |
 | dependency_proxy (4 tools) | no | `GITLAB_TOOLSETS=dependency_proxy` |
 | vulnerabilities (4 tools) | no | `GITLAB_TOOLSETS=vulnerabilities` |
+| orbit (4 tools) | no | `GITLAB_TOOLSETS=orbit` |
 
 Enable all: `GITLAB_TOOLSETS=all`. Use `GITLAB_TOOLS` to enable individual tools outside their toolset. `discover_tools` can list and activate opt-in categories for the current session. `execute_graphql` is not in a toolset; enable it explicitly with `GITLAB_TOOLS=execute_graphql`.
 

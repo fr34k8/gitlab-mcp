@@ -50,6 +50,7 @@ const TOOLSET_TOOL_COUNTS: Record<string, number> = {
   variables: 10,
   dependency_proxy: 4,
   vulnerabilities: 4,
+  orbit: 4,
 };
 
 const LEGACY_PIPELINE_CI_TOOL_COUNT = 2;
@@ -79,6 +80,7 @@ const NON_DEFAULT_TOOLSETS = [
   "variables",
   "dependency_proxy",
   "vulnerabilities",
+  "orbit",
 ];
 
 // discover_tools meta-tool is always force-injected (Step 5.5)

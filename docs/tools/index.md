@@ -17,7 +17,7 @@ directly from `TOOLSET_DEFINITIONS` in
 | Status | Groups |
 |---|---|
 | **Default** — always exposed | [Projects & Namespaces](projects.md), [Projects & Files](repositories.md), [Branches & Commits](branches.md), [Groups](groups.md), [Merge Requests](merge-requests.md), [Issues](issues.md), [Labels](labels.md), [CI Lint](ci.md), [Users & Events](users.md) |
-| **Opt-in** — must be enabled | [Work Items](workitems.md), [Pipelines, Jobs & Deployments](pipelines.md) (also `USE_PIPELINE=true`), [Milestones](milestones.md) (also `USE_MILESTONE=true`), [Wiki](wiki.md) (also `USE_GITLAB_WIKI=true`), [Releases](releases.md), [Tags](tags.md), [Variables](variables.md), [Webhooks](webhooks.md), [Search](search.md), [Dependency Proxy](dependency-proxy.md), [Vulnerabilities](vulnerabilities.md), [Meta & GraphQL](meta.md) |
+| **Opt-in** — must be enabled | [Work Items](workitems.md), [Pipelines, Jobs & Deployments](pipelines.md) (also `USE_PIPELINE=true`), [Milestones](milestones.md) (also `USE_MILESTONE=true`), [Wiki](wiki.md) (also `USE_GITLAB_WIKI=true`), [Releases](releases.md), [Tags](tags.md), [Variables](variables.md), [Webhooks](webhooks.md), [Search](search.md), [Dependency Proxy](dependency-proxy.md), [Vulnerabilities](vulnerabilities.md), [GitLab Orbit](orbit.md), [Meta & GraphQL](meta.md) |
 
 **How to enable opt-in groups** (any one is sufficient):
 
@@ -467,6 +467,19 @@ AI-assisted vulnerability triage — list findings, inspect details, dismiss wit
 | [`dismiss_vulnerability`](vulnerabilities.md#dismiss_vulnerability) | Dismiss a vulnerability with a reason (acceptable_risk, false_positive, used_in_tests, mitigating_control, not_applicable) and optional comment. Use this for the specific operation described; choose a sibling tool when you need a different resource or lifecycle action. It changes remote GitLab state and requires the necessary project or group permission; GitLab returns validation, conflict, permission, or rate-limit errors instead of silently applying an invalid request. When `project_id` or `group_id` is accepted, provide the numeric ID or complete URL-encoded path described by the schema; use required identifiers and pagination fields exactly as documented. | ✏️ |
 | [`confirm_vulnerability`](vulnerabilities.md#confirm_vulnerability) | Confirm a vulnerability as a real finding requiring remediation. Use this for the specific operation described; choose a sibling tool when you need a different resource or lifecycle action. It changes remote GitLab state and requires the necessary project or group permission; GitLab returns validation, conflict, permission, or rate-limit errors instead of silently applying an invalid request. When `project_id` or `group_id` is accepted, provide the numeric ID or complete URL-encoded path described by the schema; use required identifiers and pagination fields exactly as documented. | ✏️ |
 
+### [GitLab Orbit](orbit.md)
+
+Query the Orbit SDLC knowledge graph (Beta; Premium/Ultimate). Graph queries consume GitLab credits; schema, status, and tool listing are free. *(4 tools)*
+
+> Opt-in. Enable via `GITLAB_TOOLSETS=orbit` (or `GITLAB_TOOLSETS=all`), list individual tools in `GITLAB_TOOLS=`, or activate at runtime with the `discover_tools` MCP tool.
+
+| Tool | What it does | R/W |
+|---|---|:-:|
+| [`orbit_query`](orbit.md#orbit_query) | Execute a GitLab Orbit graph query over the indexed SDLC knowledge graph. Use this to answer cross-project relationship questions (blast radius, file-to-MR history, dependency fans) in one call instead of chaining list/get tools; use `orbit_get_schema` first when the node/edge types are unknown. It is read-only but each call consumes GitLab credits, requires Premium/Ultimate on an Orbit-enabled scope, and returns the graph result or a query/permission error. | 📖 |
+| [`orbit_get_schema`](orbit.md#orbit_get_schema) | Fetch the current GitLab Orbit graph schema (node and edge types). Use this to learn the node and edge types available for `orbit_query` before writing a query; use `orbit_get_status` when the concern is index freshness rather than shape. It is read-only and free of credit charges, and returns the current graph schema or a permission error. | 📖 |
+| [`orbit_get_status`](orbit.md#orbit_get_status) | Check GitLab Orbit indexing status for the enabled scope. Use this to check whether Orbit indexing has completed before trusting `orbit_query` results; results reflect the last index cycle, not real-time state. It is read-only and free of credit charges, and returns the indexing status or a permission error. | 📖 |
+| [`orbit_list_tools`](orbit.md#orbit_list_tools) | List the MCP tool definitions exposed by GitLab Orbit. Use this to see which MCP tool definitions Orbit itself exposes; use `orbit_query` to run graph queries directly. It is read-only and free of credit charges, and returns the tool definition list or a permission error. | 📖 |
+
 ### [Meta & GraphQL](meta.md)
 
 Server diagnostics, tool discovery, and the GraphQL escape hatch. *(2 tools)*
@@ -476,7 +489,7 @@ Server diagnostics, tool discovery, and the GraphQL escape hatch. *(2 tools)*
 | Tool | What it does | R/W |
 |---|---|:-:|
 | [`execute_graphql`](meta.md#execute_graphql) | Execute a GitLab GraphQL query. Use this only when a supported GitLab REST tool does not cover the requested operation; prefer a typed tool when one exists. The query is sent directly to GitLab and can include mutations when permission allows, so callers must treat it as potentially state-changing and handle GraphQL errors in the returned response. | 📖 |
-| [`discover_tools`](meta.md#discover_tools) | Discover and activate additional tool categories for this session. Available categories: merge_requests, issues, repositories, branches, projects, labels, ci, groups, pipelines, milestones, wiki, releases, tags, users, workitems, webhooks, search, variables, dependency_proxy, vulnerabilities. Already-active categories are listed in the response. Use this when a needed opt-in category is not currently exposed; omit `category` to inspect available categories, then call it with a category to activate that group for the current session. It changes only the session's tool registry, returns the active-tool summary, and does not change GitLab data. | 📖 |
+| [`discover_tools`](meta.md#discover_tools) | Discover and activate additional tool categories for this session. Available categories: merge_requests, issues, repositories, branches, projects, labels, ci, groups, pipelines, milestones, wiki, releases, tags, users, workitems, webhooks, search, variables, dependency_proxy, vulnerabilities, orbit. Already-active categories are listed in the response. Use this when a needed opt-in category is not currently exposed; omit `category` to inspect available categories, then call it with a category to activate that group for the current session. It changes only the session's tool registry, returns the active-tool summary, and does not change GitLab data. | 📖 |
 
 ---
 

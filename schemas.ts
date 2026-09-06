@@ -5566,3 +5566,31 @@ export const ConfirmVulnerabilitySchema = z.object({
     .describe("The ID of the vulnerability to confirm (numeric or GraphQL global ID)"),
   comment: z.string().optional().describe("Optional comment explaining the confirmation"),
 });
+
+// --- GitLab Orbit (knowledge graph) ---
+// Query the Orbit property graph: groups, projects, MRs, pipelines, issues,
+// vulnerabilities, and source code indexed as one queryable graph.
+// Requires Premium/Ultimate; Beta; query calls consume GitLab credits.
+export const OrbitQuerySchema = z.object({
+  query: z
+    .record(z.string(), z.unknown())
+    .describe(
+      "GitLab Orbit query DSL object (see the Orbit query-language reference for node/edge types and operators)"
+    ),
+  format: z
+    .enum(["raw", "llm"])
+    .optional()
+    .default("llm")
+    .describe(
+      "Response format: 'raw' for structured JSON, 'llm' for compact agent-optimized text (default)"
+    ),
+});
+
+// Schema for fetching the current Orbit graph schema (node/edge types)
+export const OrbitSchemaSchema = z.object({});
+
+// Schema for checking Orbit indexing status
+export const OrbitStatusSchema = z.object({});
+
+// Schema for listing the MCP tool definitions Orbit exposes
+export const OrbitToolsSchema = z.object({});

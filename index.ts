@@ -546,6 +546,10 @@ import {
   type MergeRequestThreadPosition,
   type MyIssuesOptions,
   MyIssuesSchema,
+  OrbitQuerySchema,
+  OrbitSchemaSchema,
+  OrbitStatusSchema,
+  OrbitToolsSchema,
   MarkAllTodosDoneSchema,
   MarkTodoDoneSchema,
   type PaginatedDiscussionsResponse,
@@ -10098,6 +10102,59 @@ async function listProjectVulnerabilities(
   };
 }
 
+/**
+ * Execute a GitLab Orbit graph query.
+ * Note: the `llm` format returns compact plain text, not JSON.
+ */
+async function orbitQuery(query: Record<string, unknown>, format: "raw" | "llm"): Promise<unknown> {
+  const url = new URL(`${getEffectiveApiUrl()}/orbit/query`);
+
+  const response = await fetch(url.toString(), {
+    ...getFetchConfig(),
+    method: "POST",
+    body: JSON.stringify({ query, format }),
+  });
+
+  await handleGitLabError(response);
+  if (format === "raw") {
+    return response.json();
+  }
+  return response.text();
+}
+
+async function orbitGetSchema(): Promise<unknown> {
+  const url = new URL(`${getEffectiveApiUrl()}/orbit/schema`);
+
+  const response = await fetch(url.toString(), {
+    ...getFetchConfig(),
+  });
+
+  await handleGitLabError(response);
+  return response.json();
+}
+
+async function orbitGetStatus(): Promise<unknown> {
+  const url = new URL(`${getEffectiveApiUrl()}/orbit/status`);
+
+  const response = await fetch(url.toString(), {
+    ...getFetchConfig(),
+  });
+
+  await handleGitLabError(response);
+  return response.json();
+}
+
+async function orbitListTools(): Promise<unknown> {
+  const url = new URL(`${getEffectiveApiUrl()}/orbit/tools`);
+
+  const response = await fetch(url.toString(), {
+    ...getFetchConfig(),
+  });
+
+  await handleGitLabError(response);
+  return response.json();
+}
+
 async function getVulnerability(vulnerabilityId: string): Promise<unknown> {
   const data = await executeGraphQL<{
     vulnerability:
@@ -13676,6 +13733,31 @@ async function handleToolCall(params: any) {
       case "confirm_vulnerability": {
         const args = ConfirmVulnerabilitySchema.parse(params.arguments);
         const result = await confirmVulnerability(args.vulnerability_id, args.comment);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      case "orbit_query": {
+        const args = OrbitQuerySchema.parse(params.arguments);
+        const result = await orbitQuery(args.query, args.format);
+        const text = typeof result === "string" ? result : JSON.stringify(result);
+        return { content: [{ type: "text", text }] };
+      }
+
+      case "orbit_get_schema": {
+        OrbitSchemaSchema.parse(params.arguments);
+        const result = await orbitGetSchema();
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      case "orbit_get_status": {
+        OrbitStatusSchema.parse(params.arguments);
+        const result = await orbitGetStatus();
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      case "orbit_list_tools": {
+        OrbitToolsSchema.parse(params.arguments);
+        const result = await orbitListTools();
         return { content: [{ type: "text", text: JSON.stringify(result) }] };
       }
 
