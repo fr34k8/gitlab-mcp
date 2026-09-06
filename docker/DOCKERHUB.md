@@ -23,8 +23,10 @@ docker run -d --name gitlab-mcp -p 127.0.0.1:3002:3002 \
 ```
 
 With Docker Compose, copy the compose file from the
-[repository](https://github.com/zereight/gitlab-mcp/tree/main/docker) and run
-`docker compose up -d`.
+[repository](https://github.com/zereight/gitlab-mcp/tree/main/docker), set at least
+`GITLAB_PERSONAL_ACCESS_TOKEN`, `STREAMABLE_HTTP=true`, and `HOST=0.0.0.0` in your `.env`
+(or environment), and run `docker compose up -d`. Without `HOST=0.0.0.0` the server binds
+to container loopback and the published port stays unreachable.
 
 ## Environment variables
 
